@@ -83,12 +83,13 @@ namespace StudentExerciseMVC.Controllers
         public async Task<ActionResult> Create(InstructorCreateViewModel model)
         {
             string sql = $@"INSERT INTO Instructor
-            (FirstName, LastName, SlackHandle, CohortId)
+            (FirstName, LastName, SlackHandle, Specialty, CohortId)
             VALUES
             (
                 '{model.instructor.FirstName}',
                 '{model.instructor.LastName}',
                 '{model.instructor.SlackHandle}',
+                '{model.instructor.Specialty}',
                 '{model.instructor.CohortId}'
             );";
 
@@ -100,21 +101,57 @@ namespace StudentExerciseMVC.Controllers
         }
 
         // GET: Instructors/Edit/5
-        public ActionResult Edit(int id)
+        public async Task<ActionResult> Edit(int id)
         {
-            return View();
+            string sql = $@"
+            SELECT 
+                i.Id,
+                i.FirstName,
+                i.LastName,
+                i.SlackHandle,
+                i.Specialty,
+                i.CohortId
+            FROM Instructor i 
+            WHERE i.Id = {id}
+            ";
+
+            using (IDbConnection conn = Connection)
+            {
+                Instructor instructor = await conn.QueryFirstAsync<Instructor>(sql);
+                InstructorEditViewModel model = new InstructorEditViewModel(_config);
+                model.instructor = instructor;
+                return View(model);
+            }
         }
 
         // POST: Instructors/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit(int id, IFormCollection collection)
+        public async Task<ActionResult> Edit(int id, InstructorEditViewModel model)
         {
             try
             {
+                Instructor instructor = model.instructor;
                 // TODO: Add update logic here
+                string sql = $@"
+                    UPDATE Instructor
+                    SET FirstName = '{instructor.FirstName}',
+                        LastName = '{instructor.LastName}',
+                        SlackHandle = '{instructor.SlackHandle}',
+                        Specialty = '{instructor.Specialty}',
+                        CohortId = {instructor.CohortId}
+                    WHERE Id = {id}
+                ";
+                using (IDbConnection conn = Connection)
+                {
+                    int rowsAffected = await conn.ExecuteAsync(sql);
+                    if (rowsAffected > 0)
+                    {
+                        return RedirectToAction(nameof(Index));
+                    }
+                    return BadRequest();
 
-                return RedirectToAction(nameof(Index));
+                }
             }
             catch
             {
